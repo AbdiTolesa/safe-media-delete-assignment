@@ -84,11 +84,14 @@ add_filter( 'media_row_actions', function( $actions, $post, $detached ) {
 
 // Used in image edit page
 add_filter( 'user_has_cap', function( $allcaps, $caps, $args ) {
-    if ( ! isset( $args[2] ) || $args[0] !== 'delete_post' || ! is_attachment( $args[2] )) {
+    if ( ! isset( $args[2] ) || $args[0] !== 'delete_post' ) {
         return $allcaps;
     }
-
-    if ( ! image_is_safe_to_delete( get_post( $args[2] ) ) ) {
+    $post = get_post( $args[2] );
+    if ( $post->post_type !== 'attachment' ) {
+        return $allcaps;
+    }
+    if ( ! image_is_safe_to_delete( $post ) ) {
         $allcaps['delete_posts'] = false;
     }
 
