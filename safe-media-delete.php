@@ -162,42 +162,39 @@ add_filter( 'attachment_fields_to_edit', function( $form_fields, $post ) {
         return $form_fields;
     }
 
-    $html = get_linked_objects_html( $image_data['linked_objects'] );
+    if ( ! empty( $image_data['linked_objects']['posts'] ) ) {
+        $linked_posts_list = get_linked_objects_html( $image_data['linked_objects']['posts'], 'post' );
+        $form_fields['linked_posts'] = array(
+            'label' => 'Linked articles',
+            'input' => 'html',
+            'html' => $linked_posts_list,
+        );
+    }
 
-    $form_fields['custom'] = array(
-        'label' => 'Linked objects',
-        'input' => 'html', // you may alos use 'textarea' field
-        'html' => $html,
-    );
+    if ( ! empty( $image_data['linked_objects']['terms'] ) ) {
+        $linked_terms_list = get_linked_objects_html( $image_data['linked_objects']['terms'], 'term' );
+        $form_fields['linked_terms'] = array(
+            'label' => 'Linked terms',
+            'input' => 'html',
+            'html' => $linked_terms_list,
+        );
+    }
+
     return $form_fields;
-
 }, 10, 2 );
 
-function get_linked_objects_html( $linked_objects ) {
-    $html = '';
-    if ( ! empty( $linked_objects['posts'] ) ) {
-        $html .= get_linked_posts_html( $linked_objects['posts'] );
-    }
-    if ( ! empty( $linked_objects['terms'] ) ) {
-        $html .= get_linked_terms_html( $linked_objects['terms'] );
-    }
-
-    return $html;
-}
-
-function get_linked_posts_html( $posts ) {
+function get_linked_objects_html( $objects, $object_type ) {
     $html  = '';
-    foreach ( $posts as $post ) {
-        $html .= '<a href="' . get_edit_post_link( $post->ID ) . '">' . $post->ID . '</a>';
-    }
 
-    return $html;
-}
-
-function get_linked_terms_html( $terms ) {
-    $html  = '';
-    foreach ( $terms as $term ) {
-        $html .= '<a href="' . get_edit_tag_link( $term->term_id, 'category' ) . '">' . $term->term_id . '</a>';
+    foreach ( $objects as $object ) {
+        if ( $object_type === 'post' ) {
+            $target = get_edit_post_link( $object->ID );
+            $id     = $object->ID;
+        } else {
+            $target = get_edit_tag_link( $object->term_id, 'category' );
+            $id     = $object->term_id;
+        }
+        $html .= '<a href="' . $target . '">' . $id . '</a>';
     }
 
     return $html;
@@ -205,6 +202,36 @@ function get_linked_terms_html( $terms ) {
 
 add_filter( 'wp_required_field_message', '__return_false' );
 
+
+function update_media_columns($columns) {
+    $columns['attached_objects'] = __( 'Attached Objects' );
+    return $columns;
+} 
+add_filter( 'manage_media_columns', 'update_media_columns' );
+ 
+function attached_objects_row_cb( $column_name, $post_id ) {
+    if ( $column_name !== 'attached_objects' ) {
+        return '';
+    }
+
+    $image_data = image_data( $post_id );
+    $can_be_deleted = $image_data['status'];
+    if ( $can_be_deleted ) {
+        return '';
+    }
+
+    if ( ! empty( $image_data['linked_objects']['posts'] ) ) {
+        echo _e( 'Articles', 'smd' ) . '<br>';
+        echo get_linked_objects_html( $image_data['linked_objects']['posts'], 'post' );
+        echo '<br>';
+    }
+
+    if ( ! empty( $image_data['linked_objects']['terms'] ) ) {
+        echo _e( 'Terms', 'smd' ) . '<br>';
+        echo get_linked_objects_html( $image_data['linked_objects']['terms'], 'term' );
+    }
+}
+add_action( 'manage_media_custom_column', 'attached_objects_row_cb', 10, 2 );
 
 
 // function wpse_312694_restrict_page_deletion( $caps, $cap, $user_id, $args ) {
