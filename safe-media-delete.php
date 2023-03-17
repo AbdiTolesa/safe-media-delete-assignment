@@ -59,12 +59,10 @@ function get_objects_using_image( $attachment_id ) {
     $can_be_deleted = true;
     $linked_posts = array();
 
-    $objects_using_image = array(
+    return array(
         'terms' => get_terms_using_image( $attachment_id ),
         'posts' => get_posts_using_image( $attachment_id ),
     );
-
-    return $objects_using_image;
 }
 
 function get_posts_using_image( $attachment_id ) {
@@ -235,6 +233,40 @@ function attached_objects_row_cb( $column_name, $post_id ) {
     }
 }
 add_action( 'manage_media_custom_column', 'attached_objects_row_cb', 10, 2 );
+
+// TASK 4
+add_action( 'rest_api_init', function () {
+    register_rest_route( 'assignment/v1', '/image/(?P<id>\d+)', array(
+      'methods' => 'GET',
+      'callback' => 'get_image_data',
+      'args' => array(
+        'id' => array(
+          'validate_callback' => function( $param, $request, $key ) {
+            return is_numeric( $param );
+          }
+        ),
+      ),
+    ) );
+} );
+
+function get_image_data( $data ) {
+    $post = get_post( $data['id'] );
+    
+    $response = array();
+    $response['ID'] = $data['id'];
+    $response['date'] = $post->post_date;
+    $response['slug'] = get_attachment_link( $data['id'] );
+    $response['type'] = $post->post_mime_type;
+    $response['link'] = wp_get_attachment_url( $data['id'] );
+    $response['alt_text'] = get_post_meta( $data['id'] , '_wp_attachment_image_alt', true );
+    $linked_objects = get_objects_using_image( $data['id'] );
+    $response['attached_objects'] = array(
+        'posts' => array_column( $linked_objects['posts'], 'ID' ),
+        'terms' => array_column( $linked_objects['terms'], 'ID' ),
+    );
+
+    return $response;
+}
 
 
 // function wpse_312694_restrict_page_deletion( $caps, $cap, $user_id, $args ) {
