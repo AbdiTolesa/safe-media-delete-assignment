@@ -77,7 +77,9 @@ function get_posts_using_image( $attachment_id ) {
     $posts_with_attachments = get_posts_attachment_data();
     foreach ( $posts_with_attachments as $post ) {
         if ( $post->meta_value == $attachment_id || ! empty( preg_match( '#\w*(<!-- wp:image {"id":' . $attachment_id . '[^>]*>)\w*#', $post->post_content ) ) || ! empty( preg_match( '!(\w*<img [^>]*src="' . $url . '[^>]*>\w*)!', $post->post_content ) ) ) {
-            $posts_linked_to_image[ $attachment_id ] = $post;
+            if ( false === array_search( $post->ID, array_column( $posts_linked_to_image, 'ID' ) ) ) {
+                $posts_linked_to_image[] = $post;
+            }
         }
     }
 
@@ -184,8 +186,7 @@ add_filter( 'attachment_fields_to_edit', function( $form_fields, $post ) {
 }, 10, 2 );
 
 function get_linked_objects_html( $objects, $object_type ) {
-    $html  = '';
-
+    $html = '';
     foreach ( $objects as $object ) {
         if ( $object_type === 'post' ) {
             $target = get_edit_post_link( $object->ID );
@@ -194,7 +195,8 @@ function get_linked_objects_html( $objects, $object_type ) {
             $target = get_edit_tag_link( $object->term_id, 'category' );
             $id     = $object->term_id;
         }
-        $html .= '<a href="' . $target . '">' . $id . '</a>';
+
+        $html .= ' <a href="' . $target . '">' . $id . '</a>';
     }
 
     return $html;
@@ -214,8 +216,9 @@ function attached_objects_row_cb( $column_name, $post_id ) {
         return '';
     }
 
-    $image_data = image_data( $post_id );
+    $image_data     = image_data( $post_id );
     $can_be_deleted = $image_data['status'];
+
     if ( $can_be_deleted ) {
         return '';
     }
