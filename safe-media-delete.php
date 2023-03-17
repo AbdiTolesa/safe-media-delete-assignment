@@ -55,7 +55,7 @@ function image_is_safe_to_delete( $attachment ) {
 
     $posts_with_attachments = get_posts_attachment_data();
     foreach ( $posts_with_attachments as $post ) {
-        if ( $post->meta_value == $attachment->ID || strpos( $post->post_content, $url ) !== false ) {
+        if ( $post->meta_value == $attachment->ID || ! empty( preg_match( '#\w*(<!-- wp:image {"id":' . $attachment->ID . '[^>]*>)\w*#', $post->post_content ) ) || ! empty( preg_match( '!(\w*<img [^>]*src="' . $url . '[^>]*>\w*)!', $post->post_content ) ) ) {
             $can_be_deleted = false;
             $linked_posts[ $attachment->ID ] = $post->ID;
         }
