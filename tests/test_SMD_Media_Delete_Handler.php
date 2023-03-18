@@ -1,11 +1,12 @@
 <?php
 
+/**
+ * Contains tests for methods in SMD_Media_Delete_Handle.
+ */
 class test_SMD_Media_Delete_Handler extends WP_UnitTestCase {
 
 	public function test_get_image_deletable_status() {
-		// create a post and set the attachment as Featured image
 		$post = $this->factory->post->create_and_get();
-		// create attachment
 		$attachment_id = $this->factory->attachment->create_upload_object( __DIR__ . '/assets/test-attachment.jpg', $post->ID );
 
 		set_post_thumbnail( $post, $attachment_id );
