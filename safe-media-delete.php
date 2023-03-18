@@ -37,14 +37,14 @@ function add_terms_image_field() {
 }
 
 add_filter( 'wp_prepare_attachment_for_js', function( $response, $attachment ) {
-    $can_be_deleted = image_data( $attachment->ID )['status'];
+    $can_be_deleted = get_image_deletable_status( $attachment->ID )['status'];
     if ( ! $can_be_deleted ) {
         $response['nonces']['delete'] = false;
     }
     return $response;
 }, 10, 2 );
 
-function image_data( $attachment_id ) {
+function get_image_deletable_status( $attachment_id ) {
     $can_be_deleted = true;
     $objects_using_image = get_objects_using_image( $attachment_id );
 
@@ -124,7 +124,7 @@ function get_posts_attachment_data() {
 
 // Can be used in media list page row options
 add_filter( 'media_row_actions', function( $actions, $post, $detached ) {
-    if ( ! image_data( $post->ID )['status'] ) {
+    if ( ! get_image_deletable_status( $post->ID )['status'] ) {
         unset( $actions['delete'] );
     }
     return $actions;
@@ -139,7 +139,7 @@ add_filter( 'user_has_cap', function( $allcaps, $caps, $args ) {
     if ( $post->post_type !== 'attachment' ) {
         return $allcaps;
     }
-    if ( ! image_data( $post->ID )['status'] ) {
+    if ( ! get_image_deletable_status( $post->ID )['status'] ) {
         $allcaps['delete_posts'] = false;
     }
 
@@ -149,14 +149,14 @@ add_filter( 'user_has_cap', function( $allcaps, $caps, $args ) {
 
 // Prevent used image from being deleted via bulk delete
 add_filter( 'pre_delete_attachment', function( $delete, $post ) {
-    if ( ! image_data( $post->ID )['status'] ) {
+    if ( ! get_image_deletable_status( $post->ID )['status'] ) {
         return false;
     }
     return $delete;
 }, 10, 2 );
 
 add_filter( 'attachment_fields_to_edit', function( $form_fields, $post ) {
-    $image_data = image_data( $post->ID );
+    $image_data = get_image_deletable_status( $post->ID );
     $can_be_deleted = $image_data['status'];
     if ( $can_be_deleted ) {
         return $form_fields;
@@ -214,7 +214,7 @@ function attached_objects_row_cb( $column_name, $post_id ) {
         return '';
     }
 
-    $image_data     = image_data( $post_id );
+    $image_data     = get_image_deletable_status( $post_id );
     $can_be_deleted = $image_data['status'];
 
     if ( $can_be_deleted ) {
@@ -234,22 +234,32 @@ function attached_objects_row_cb( $column_name, $post_id ) {
 }
 add_action( 'manage_media_custom_column', 'attached_objects_row_cb', 10, 2 );
 
-// TASK 4
+// TASK 3
 add_action( 'rest_api_init', function () {
-    register_rest_route( 'assignment/v1', '/image/(?P<id>\d+)', array(
-      'methods' => 'GET',
-      'callback' => 'get_image_data',
-      'args' => array(
+    $args = array(
         'id' => array(
           'validate_callback' => function( $param, $request, $key ) {
             return is_numeric( $param );
           }
         ),
-      ),
+    );
+
+    register_rest_route( 'assignment/v1', '/image/(?P<id>\d+)', array(
+        array(
+            'methods' => 'GET',
+            'callback'=> 'get_image',
+            'args'    => $args,
+        ),
+        array(
+            'methods' => 'DELETE',
+            'callback'=> 'delete_image',
+            'args'    => $args,
+        )
     ) );
+
 } );
 
-function get_image_data( $data ) {
+function get_image( $data ) {
     $post = get_post( $data['id'] );
     
     $response = array();
@@ -267,6 +277,15 @@ function get_image_data( $data ) {
 
     return $response;
 }
+
+function delete_image( $data ) {
+    $deleted = wp_delete_attachment( $data['id'] );
+    if ( $deleted ) {
+      return new WP_REST_Response( true, 200 );
+    }
+    return new WP_Error( 'cant-delete', __( 'Cannot delete image because it may be used in posts or tags.', 'smd' ), array( 'status' => 500 ) );
+}
+
 
 
 // function wpse_312694_restrict_page_deletion( $caps, $cap, $user_id, $args ) {

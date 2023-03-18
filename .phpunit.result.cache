@@ -1,0 +1,1 @@
+{"version":1,"defects":{"SampleTest::test_sample":3,"Warning":6,"test_SMD_Media_Delete_Handler::test_get_image_deletable_status":3,"test_SMD_Media_Delete_Handler::test_delete_image":3},"times":{"SampleTest::test_sample":0.021,"Warning":0.007,"test_SMD_Media_Delete_Handler::test_get_image_deletable_status":0.282,"test_SMD_Media_Delete_Handler::test_delete_image":0.141}}
